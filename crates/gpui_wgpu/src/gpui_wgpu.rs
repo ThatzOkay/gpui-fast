@@ -1,7 +1,9 @@
 mod cosmic_text_system;
 mod fast;
+#[path = "fast/wgpu_atlas.rs"]
 mod wgpu_atlas;
 mod wgpu_context;
+#[path = "fast/wgpu_renderer.rs"]
 mod wgpu_renderer;
 
 pub use cosmic_text_system::*;
