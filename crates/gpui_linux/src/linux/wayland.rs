@@ -1,3 +1,4 @@
+#[path = "../fast/wayland_client.rs"]
 mod client;
 mod clipboard;
 mod cursor;

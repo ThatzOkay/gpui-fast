@@ -350,7 +350,7 @@ wasm-bindgen-futures = "0.4"
 web-time = "1.1.0"
 webpki-roots = "1.0.8"
 # 30.0.1 lacks the Vulkan surface-drop fix (wgpu#10230) and WebGL resize fix (wgpu#10348).
-wgpu = { git = "https://github.com/ThatzOkay/wgpu", rev = "a435c1c619f466e5fb2a3496b2df83cfd9737bed", default-features = false }
+wgpu = { git = "https://github.com/ThatzOkay/wgpu", rev = "d6e27e86a88c57995928440206fe994b68bc05c6", default-features = false }
 which = "8"
 windows-core = "0.62"
 windows-registry = "0.6.0"
