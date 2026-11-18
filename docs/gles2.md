@@ -50,3 +50,54 @@ and forwards frame-batched contacts to GPUI's existing raw-touch API. Protocol
 contact IDs may be reused, so this bridge allocates fresh `TouchId` values and
 keeps their target window fixed for each contact. Cancellation, seat replacement,
 and window closure clean up active contacts.
+
+## Opt-in frame timing
+
+Build both local forks into the application, then run:
+
+```sh
+GPUI_FRAME_TIMING=1 WGPU_FRAME_TIMING=1 \
+RUST_LOG=info ./gpui-test
+```
+
+`gpui_frame_timing` reports `ui_draw` (total CPU scene construction, layout, and paint),
+`window_present`, and `gles2_render` (surface acquisition, scene planning,
+bindings/shapes, vertex upload, encoding, submission, presentation).
+`wgpu_frame_timing` reports `gl_submit` (context lock, command replay,
+fallback GLES 2 `glFinish` wait, fence/flush) and `egl_present` (context setup,
+resolve/blit, swap, context release in tail).
+
+Each line includes a scope-local sample ID, a Unix start timestamp in microseconds,
+total elapsed milliseconds, and successive non-overlapping stage durations.
+Nested scopes overlap: do not add renderer submit time to HAL submit time.
+These are CPU wall-clock measurements, not GPU timestamp queries. In particular,
+`finish_wait` includes waiting for previously queued GPU work, and EGL swap may
+include compositor/vsync backpressure. No extra GPU synchronization is inserted.
+Timers and allocations stay disabled unless their environment flag is `1` or `true`.
+Logging itself can affect frame pacing; capture short runs and compare with logging off.
+
+This app pins Git revisions. Local fork edits require Cargo path patches (including
+wgpu) or newly published revisions before they appear in a tablet build.
+
+## Surface RT performance
+
+The GLES 2 renderer trims rounded fills and borders to avoid unnecessary
+fragment work, skips transparent fills, and folds a leading opaque full-window
+background into the render-pass clear when its coverage is exact. Primitive
+order, content masks, translucent colors, and rounded edges remain respected.
+Set `GPUI_GLES2_SHAPE_TRIMMING=0` or `GPUI_GLES2_CLEAR_BACKGROUND=0` to disable
+the respective optimization for comparisons.
+
+When the platform requests compositor-paced presentation, the renderer uses
+Immediate mode only if the EGL configuration supports a zero swap interval;
+otherwise it retains FIFO. The pinned companion wgpu revision enables
+GL_APPLE_sync fences only when the extension and all required functions are
+available. Unsupported contexts retain the synchronous GLES 2 fallback.
+The backend also caches texture sampler parameters within a command buffer
+and avoids a temporary CPU allocation when copying between distinct buffers.
+
+On the tablet, controlled full-window background comparisons averaged about
+50 FPS with folding enabled versus 39–41 FPS without it. These measurements
+include scene and compositor work and vary with power settings and workload.
+The rejected upload-reuse experiment is not included. App-specific overlay
+changes are maintained in the demo application, not in this renderer.

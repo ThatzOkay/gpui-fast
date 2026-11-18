@@ -5314,7 +5314,7 @@ dependencies = [
 [[package]]
 name = "naga"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "arrayvec",
  "bit-set 0.11.1",
@@ -5339,7 +5339,7 @@ dependencies = [
 [[package]]
 name = "naga-types"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "hashbrown 0.17.1",
  "indexmap",
@@ -9868,7 +9868,7 @@ dependencies = [
 [[package]]
 name = "wgpu"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "arrayvec",
  "bitflags 2.13.1",
@@ -9930,7 +9930,7 @@ dependencies = [
 [[package]]
 name = "wgpu-core"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "arrayvec",
  "bit-set 0.11.1",
@@ -9974,7 +9974,7 @@ dependencies = [
 [[package]]
 name = "wgpu-core-deps-apple"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "wgpu-hal 30.0.0",
 ]
@@ -9991,7 +9991,7 @@ dependencies = [
 [[package]]
 name = "wgpu-core-deps-emscripten"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "wgpu-hal 30.0.0",
 ]
@@ -9999,7 +9999,7 @@ dependencies = [
 [[package]]
 name = "wgpu-core-deps-linux-android-bsd"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "wgpu-hal 30.0.0",
 ]
@@ -10016,7 +10016,7 @@ dependencies = [
 [[package]]
 name = "wgpu-core-deps-wasm"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "wgpu-hal 30.0.0",
 ]
@@ -10024,7 +10024,7 @@ dependencies = [
 [[package]]
 name = "wgpu-core-deps-windows"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "wgpu-hal 30.0.0",
 ]
@@ -10095,7 +10095,7 @@ dependencies = [
 [[package]]
 name = "wgpu-hal"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "android_system_properties",
  "arrayvec",
@@ -10157,7 +10157,7 @@ dependencies = [
 [[package]]
 name = "wgpu-naga-bridge"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "naga 30.0.0",
  "wgpu-types 30.0.0",
@@ -10166,7 +10166,7 @@ dependencies = [
 [[package]]
 name = "wgpu-sync"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "cfg-if",
  "lock_api",
@@ -10193,7 +10193,7 @@ dependencies = [
 [[package]]
 name = "wgpu-types"
 version = "30.0.0"
-source = "git+https://github.com/ThatzOkay/wgpu?rev=d6e27e86a88c57995928440206fe994b68bc05c6#d6e27e86a88c57995928440206fe994b68bc05c6"
+source = "git+https://github.com/ThatzOkay/wgpu?rev=94466305453296bda2d2ab4d5d1a0017af945221#94466305453296bda2d2ab4d5d1a0017af945221"
 dependencies = [
  "bitflags 2.13.1",
  "bytemuck",
