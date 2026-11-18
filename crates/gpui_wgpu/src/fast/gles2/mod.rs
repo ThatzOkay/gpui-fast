@@ -3,6 +3,7 @@ mod scene;
 mod shapes;
 #[cfg(test)]
 mod tests;
+mod timing;
 
 use super::{GpuContext, RendererState, WgpuRenderer, WgpuSurfaceConfig};
 use crate::{CompositorGpuHint, WgpuAtlas, WgpuContext};
@@ -68,7 +69,36 @@ pub(super) struct Renderer {
     warned: HashSet<&'static str>,
 }
 
+fn preferred_present_mode(
+    preferred: Option<wgpu::PresentMode>,
+    supported: &[wgpu::PresentMode],
+) -> wgpu::PresentMode {
+    preferred
+        .map(|mode| {
+            if mode == wgpu::PresentMode::Mailbox {
+                wgpu::PresentMode::Immediate
+            } else {
+                mode
+            }
+        })
+        .filter(|mode| supported.contains(mode))
+        .unwrap_or(wgpu::PresentMode::Fifo)
+}
+
 impl Renderer {
+    pub(super) fn present_mode(
+        &self,
+        surface: &wgpu::Surface<'_>,
+        preferred: Option<wgpu::PresentMode>,
+    ) -> wgpu::PresentMode {
+        preferred_present_mode(
+            preferred,
+            &surface
+                .get_capabilities(&self.context.adapter)
+                .present_modes,
+        )
+    }
+
     fn new(
         context: &WgpuContext,
         surface: wgpu::Surface<'static>,
@@ -260,6 +290,7 @@ impl Renderer {
         let Some(surface) = &self.surface else {
             return false;
         };
+        let mut timing = timing::Timer::new("gles2_render");
         let frame = match surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(frame) => frame,
             wgpu::CurrentSurfaceTexture::Suboptimal(frame) => {
@@ -276,6 +307,7 @@ impl Renderer {
                 return false;
             }
         };
+        timing.mark("acquire_surface");
         let plan = scene::plan(
             scene,
             [frame.texture.width(), frame.texture.height()],
@@ -284,6 +316,7 @@ impl Renderer {
             &mut self.targets,
             &mut self.warned,
         );
+        timing.mark("scene_plan");
         let vertices = &plan.vertices;
         self.atlas.before_frame();
         let device = &self.context.device;
@@ -357,6 +390,7 @@ impl Renderer {
                 })
             })
             .collect();
+        timing.mark("bindings_shapes");
         if !vertices.is_empty() {
             let bytes = bytemuck::cast_slice(vertices);
             if bytes.len() as u64 > self.vertex_capacity {
@@ -374,6 +408,7 @@ impl Renderer {
                 .queue
                 .write_buffer(self.vertex_buffer.as_ref().unwrap(), 0, bytes);
         }
+        timing.mark("vertex_upload");
         let view = frame.texture.create_view(&Default::default());
         let mut encoder = device.create_command_encoder(&Default::default());
         for (planned, bindings) in plan.passes.iter().zip(&bindings) {
@@ -415,8 +450,11 @@ impl Renderer {
                 }
             }
         }
+        timing.mark("encode");
         self.context.queue.submit(Some(encoder.finish()));
+        timing.mark("submit");
         self.context.queue.present(frame);
+        timing.mark("present");
         true
     }
 }
@@ -431,9 +469,23 @@ impl WgpuRenderer {
         compositor_gpu: Option<CompositorGpuHint>,
         atlas: Arc<WgpuAtlas>,
     ) -> anyhow::Result<Self> {
+        let unthrottled = config.preferred_present_mode == Some(wgpu::PresentMode::Mailbox);
+        let config = WgpuSurfaceConfig {
+            preferred_present_mode: Some(preferred_present_mode(
+                config.preferred_present_mode,
+                &surface.get_capabilities(&context.adapter).present_modes,
+            )),
+            ..config
+        };
         let (surface_config, transparent_alpha_mode, opaque_alpha_mode) =
             Self::surface_configuration(&surface, &context.adapter, &context.device, &config)?;
-        if !surface_configured {
+        log::info!(
+            "GLES 2 presentation mode: {:?}",
+            surface_config.present_mode
+        );
+        if !surface_configured
+            || (unthrottled && surface_config.present_mode == wgpu::PresentMode::Immediate)
+        {
             surface.configure(&context.device, &surface_config);
         }
         let renderer = Renderer::new(context, surface, atlas.clone(), surface_config.format);
@@ -454,5 +506,26 @@ impl WgpuRenderer {
             last_surface_error: None,
             needs_redraw: false,
         })
+    }
+}
+
+#[cfg(test)]
+mod presentation_tests {
+    #[test]
+    fn compositor_pacing_uses_immediate_only_when_supported() {
+        use wgpu::PresentMode::{Fifo, Immediate, Mailbox};
+        assert_eq!(
+            super::preferred_present_mode(Some(Mailbox), &[Fifo, Immediate]),
+            Immediate
+        );
+        assert_eq!(super::preferred_present_mode(Some(Mailbox), &[Fifo]), Fifo);
+        assert_eq!(
+            super::preferred_present_mode(None, &[Fifo, Immediate]),
+            Fifo
+        );
+        assert_eq!(
+            super::preferred_present_mode(Some(Fifo), &[Fifo, Immediate]),
+            Fifo
+        );
     }
 }

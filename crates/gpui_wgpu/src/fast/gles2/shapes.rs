@@ -22,6 +22,22 @@ pub(super) fn radii(corners: Corners<ScaledPixels>) -> [f32; 4] {
 }
 
 impl Shape {
+    pub fn border_regions(&self) -> Option<[[f32; 4]; 4]> {
+        let [w, h, ..] = self.size;
+        let left = self.radii_x[0].max(self.radii_x[3]).max(self.widths[3]) + 1.0;
+        let right = w - self.radii_x[1].max(self.radii_x[2]).max(self.widths[1]) - 1.0;
+        let top = self.radii_y[0].max(self.radii_y[1]).max(self.widths[0]) + 1.0;
+        let bottom = h - self.radii_y[2].max(self.radii_y[3]).max(self.widths[2]) - 1.0;
+        if right <= left || bottom <= top {
+            return None;
+        }
+        Some([
+            [0.0, 0.0, 1.0, top / h],
+            [0.0, bottom / h, 1.0, (h - bottom) / h],
+            [0.0, top / h, left / w, (bottom - top) / h],
+            [right / w, top / h, (w - right) / w, (bottom - top) / h],
+        ])
+    }
     pub fn new(
         bounds: Bounds<ScaledPixels>,
         horizontal: [f32; 4],
@@ -91,6 +107,49 @@ impl Shape {
 mod tests {
     use super::Shape;
     use gpui::{BorderStyle, Bounds, Edges, ScaledPixels, point, size, transparent_black};
+
+    #[test]
+    fn border_regions_preserve_edges_without_overlapping_alpha() {
+        let shape = Shape::new(
+            Bounds {
+                origin: point(ScaledPixels(0.0), ScaledPixels(0.0)),
+                size: size(ScaledPixels(100.0), ScaledPixels(80.0)),
+            },
+            [12.0, 8.0, 16.0, 4.0],
+            [12.0, 8.0, 16.0, 4.0],
+            Edges {
+                top: ScaledPixels(2.0),
+                right: ScaledPixels(3.0),
+                bottom: ScaledPixels(4.0),
+                left: ScaledPixels(5.0),
+            },
+            transparent_black(),
+            BorderStyle::Solid,
+            [0.0, 0.0, 1.0, 1.0],
+        );
+        let regions = shape.border_regions().unwrap();
+        for y in 0..80 {
+            for x in 0..100 {
+                let p = [(x as f32 + 0.5) / 100.0, (y as f32 + 0.5) / 80.0];
+                let covered = regions
+                    .iter()
+                    .filter(|r| {
+                        p[0] >= r[0] && p[0] < r[0] + r[2] && p[1] >= r[1] && p[1] < r[1] + r[3]
+                    })
+                    .count();
+                assert!(covered <= 1, "overlapping strips at {x},{y}");
+                if x < 13 || x >= 83 || y < 13 || y >= 63 {
+                    assert_eq!(covered, 1);
+                }
+                if (20..80).contains(&x) && (20..60).contains(&y) {
+                    assert_eq!(covered, 0);
+                }
+            }
+        }
+        let mut thick = shape;
+        thick.widths = [60.0; 4];
+        assert!(thick.border_regions().is_none());
+    }
 
     #[test]
     fn normalizes_overlapping_radii_and_maps_atlas_uv_to_local_pixels() {

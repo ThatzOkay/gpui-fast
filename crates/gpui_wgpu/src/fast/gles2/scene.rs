@@ -119,15 +119,35 @@ pub(super) fn plan(
         next_group: 0,
         plan: Plan::default(),
     };
-    let draws = planner.scene(
+    let mut draws = planner.scene(
         scene,
         viewport,
         point(ScaledPixels(0.0), ScaledPixels(0.0)),
         0,
     );
+    let mut background = wgpu::Color::BLACK;
+    static CLEAR_BACKGROUND: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| {
+        std::env::var("GPUI_GLES2_CLEAR_BACKGROUND").as_deref() != Ok("0")
+    });
+    if *CLEAR_BACKGROUND
+        && let Some(draw) = draws.first_mut()
+        && draw.kind == PipelineKind::SolidOpaque
+        && draw.texture.is_none()
+        && draw.shape.is_none()
+        && draw.scissor == [0, 0, viewport[0], viewport[1]]
+        && let Some(color) = super::geometry::opaque_surface_color(
+            &planner.plan.vertices[draw.vertices.start as usize..draw.vertices.end as usize],
+        )
+    {
+        background = color;
+        draw.vertices.start += 6;
+        if draw.vertices.is_empty() {
+            draws.remove(0);
+        }
+    }
     planner.plan.passes.push(Pass {
         target: None,
-        clear: wgpu::Color::BLACK,
+        clear: background,
         draws,
     });
     let epoch = planner.targets.epoch;
@@ -159,6 +179,13 @@ fn clear(color: Rgba) -> wgpu::Color {
     }
 }
 
+fn trim_shapes() -> bool {
+    static ENABLED: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| {
+        std::env::var("GPUI_GLES2_SHAPE_TRIMMING").as_deref() != Ok("0")
+    });
+    *ENABLED
+}
+
 impl Planner<'_> {
     fn warn(&mut self, message: &'static str) {
         if self.warned.insert(message) {
@@ -178,15 +205,59 @@ impl Planner<'_> {
         let Some(scissor) = scissor(mask, [viewport[0] as f32, viewport[1] as f32]) else {
             return;
         };
+        let border_regions =
+            if trim_shapes() && matches!(kind, PipelineKind::Border | PipelineKind::Rounded) {
+                shape.as_ref().and_then(Shape::border_regions)
+            } else {
+                None
+            };
+        if kind == PipelineKind::Rounded
+            && let Some(regions) = border_regions
+        {
+            let left = regions[2][2];
+            let right = regions[3][0];
+            let top = regions[0][3];
+            let bottom = regions[1][1];
+            self.append(
+                draws,
+                Rectangle {
+                    bounds: Bounds {
+                        origin: rectangle.bounds.origin
+                            + point(
+                                rectangle.bounds.size.width * left,
+                                rectangle.bounds.size.height * top,
+                            ),
+                        size: size(
+                            rectangle.bounds.size.width * (right - left),
+                            rectangle.bounds.size.height * (bottom - top),
+                        ),
+                    },
+                    ..rectangle
+                },
+                mask,
+                viewport,
+                texture,
+                if rectangle.color.a == 1.0 {
+                    PipelineKind::SolidOpaque
+                } else {
+                    PipelineKind::SolidAlpha
+                },
+                None,
+            );
+        }
         let shape = shape.map(|shape| {
             self.plan.shapes.push(shape);
             self.plan.shapes.len() - 1
         });
         let start = self.plan.vertices.len() as u32;
-        rectangle.append(
-            [viewport[0] as f32, viewport[1] as f32],
-            &mut self.plan.vertices,
-        );
+        let extent = [viewport[0] as f32, viewport[1] as f32];
+        if let Some(regions) = border_regions {
+            for region in regions {
+                rectangle.append_region(extent, &mut self.plan.vertices, region);
+            }
+        } else {
+            rectangle.append(extent, &mut self.plan.vertices);
+        }
         let end = self.plan.vertices.len() as u32;
         if let Some(last) = draws.last_mut()
             && last.kind == kind
@@ -231,7 +302,7 @@ impl Planner<'_> {
                             continue;
                         }
                         let rounded = quad.corner_radii != Default::default()
-                            || quad.border_widths != Default::default();
+                            || (!trim_shapes() && quad.border_widths != Default::default());
                         let kind = if rounded {
                             PipelineKind::Rounded
                         } else if color.a == 1.0 {
@@ -240,31 +311,34 @@ impl Planner<'_> {
                             PipelineKind::SolidAlpha
                         };
                         let uv = [0.0, 0.0, 1.0, 1.0];
-                        let shape = rounded.then(|| {
-                            Shape::new(
-                                quad.bounds,
-                                radii(quad.corner_radii),
-                                radii(quad.corner_radii),
-                                quad.border_widths,
-                                quad.border_color,
-                                quad.border_style,
-                                uv,
-                            )
-                        });
-                        self.append(
-                            &mut draws,
-                            Rectangle {
-                                bounds: quad.bounds,
-                                uv,
-                                color,
-                                transform: transform(origin),
-                            },
-                            local_mask(quad.content_mask.bounds, origin),
-                            viewport,
-                            None,
-                            kind,
-                            shape,
-                        );
+                        let shape =
+                            (rounded || quad.border_widths != Default::default()).then(|| {
+                                Shape::new(
+                                    quad.bounds,
+                                    radii(quad.corner_radii),
+                                    radii(quad.corner_radii),
+                                    quad.border_widths,
+                                    quad.border_color,
+                                    quad.border_style,
+                                    uv,
+                                )
+                            });
+                        if color.a > 0.0 || !trim_shapes() {
+                            self.append(
+                                &mut draws,
+                                Rectangle {
+                                    bounds: quad.bounds,
+                                    uv,
+                                    color,
+                                    transform: transform(origin),
+                                },
+                                local_mask(quad.content_mask.bounds, origin),
+                                viewport,
+                                None,
+                                kind,
+                                if rounded { shape } else { None },
+                            );
+                        }
                         if quad.border_color.a > 0.0 && quad.border_widths != Default::default() {
                             self.border(&mut draws, quad, shape.unwrap(), viewport, origin);
                         }

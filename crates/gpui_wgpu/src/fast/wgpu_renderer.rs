@@ -2234,6 +2234,8 @@ impl WgpuRenderer {
         }
 
         if let Some(renderer) = &mut self.fast_gles2 {
+            self.surface_config.present_mode =
+                renderer.present_mode(&surface, config.preferred_present_mode);
             renderer.surface = Some(surface);
             renderer.configure(&self.surface_config);
             return Ok(());

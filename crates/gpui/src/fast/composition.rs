@@ -1422,6 +1422,7 @@ fn ordered_plain_scene(
 /// Presents the frame last drawn: on its one surface, or split along the
 /// composition tree while the window composes around another surface.
 pub(crate) fn present(window: &mut Window) {
+    let _timing = crate::fast::frame_timing::Timer::new("window_present");
     let state = window.fast_composition.0.clone();
     let splits = {
         let state = state.borrow();

@@ -80,7 +80,7 @@ pub(crate) const XINPUT_ALL_DEVICE_GROUPS: xinput::DeviceId = 1;
 const GPUI_X11_SCALE_FACTOR_ENV: &str = "GPUI_X11_SCALE_FACTOR";
 
 pub(crate) struct WindowRef {
-    window: X11WindowStatePtr,
+    pub(crate) window: X11WindowStatePtr,
     refresh_state: Option<RefreshState>,
     last_visibility: Visibility,
     is_mapped: bool,
@@ -1969,13 +1969,7 @@ impl X11Client {
     pub(crate) fn window_identifier(
         &self,
     ) -> impl Future<Output = Option<WindowIdentifier>> + Send + 'static {
-        let state = self.0.borrow();
-        state
-            .keyboard_focused_window
-            .and_then(|focused_window| state.windows.get(&focused_window))
-            .map(|window| window.window.x_window as u64)
-            .map(|x_window| std::future::ready(Some(WindowIdentifier::from_xid(x_window))))
-            .unwrap_or(std::future::ready(None))
+        crate::fast::x11_portal::window_identifier(self)
     }
 }
 

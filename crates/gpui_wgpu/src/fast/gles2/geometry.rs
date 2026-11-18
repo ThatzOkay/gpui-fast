@@ -9,6 +9,33 @@ pub(super) struct Vertex {
     color: [f32; 4],
 }
 
+pub(super) fn opaque_surface_color(vertices: &[Vertex]) -> Option<wgpu::Color> {
+    let vertices = vertices.get(..6)?;
+    let positions = [
+        [-1.0, 1.0],
+        [1.0, 1.0],
+        [-1.0, -1.0],
+        [-1.0, -1.0],
+        [1.0, 1.0],
+        [1.0, -1.0],
+    ];
+    let color = vertices[0].color;
+    if color[3] != 1.0
+        || vertices
+            .iter()
+            .zip(positions)
+            .any(|(v, p)| v.position != p || v.color != color)
+    {
+        return None;
+    }
+    Some(wgpu::Color {
+        r: color[0] as f64,
+        g: color[1] as f64,
+        b: color[2] as f64,
+        a: 1.0,
+    })
+}
+
 pub(super) struct Rectangle {
     pub bounds: Bounds<ScaledPixels>,
     pub uv: [f32; 4],
@@ -18,6 +45,10 @@ pub(super) struct Rectangle {
 
 impl Rectangle {
     pub fn append(&self, viewport: [f32; 2], vertices: &mut Vec<Vertex>) {
+        self.append_region(viewport, vertices, [0.0, 0.0, 1.0, 1.0]);
+    }
+
+    pub fn append_region(&self, viewport: [f32; 2], vertices: &mut Vec<Vertex>, region: [f32; 4]) {
         let color = self.color.to_rgb();
         for [x, y] in [
             [0.0, 0.0],
@@ -27,6 +58,8 @@ impl Rectangle {
             [1.0, 0.0],
             [1.0, 1.0],
         ] {
+            let x = region[0] + x * region[2];
+            let y = region[1] + y * region[3];
             let local = [
                 self.bounds.origin.x.0 + x * self.bounds.size.width.0,
                 self.bounds.origin.y.0 + y * self.bounds.size.height.0,
@@ -122,5 +155,32 @@ mod tests {
             size: size(ScaledPixels(3.0), ScaledPixels(3.0)),
         };
         assert_eq!(scissor(bounds, [100.0, 40.0]), Some([1, 2, 3, 3]));
+    }
+    #[test]
+    fn surface_clear_requires_complete_opaque_uniform_coverage() {
+        let rect = Rectangle {
+            bounds: Bounds {
+                origin: point(ScaledPixels(0.0), ScaledPixels(0.0)),
+                size: size(ScaledPixels(100.0), ScaledPixels(40.0)),
+            },
+            uv: [0.0, 0.0, 1.0, 1.0],
+            color: gpui::white().into(),
+            transform: TransformationMatrix::unit(),
+        };
+        let mut vertices = Vec::new();
+        rect.append([100.0, 40.0], &mut vertices);
+        assert_eq!(
+            super::opaque_surface_color(&vertices),
+            Some(wgpu::Color::WHITE)
+        );
+        assert_eq!(super::opaque_surface_color(&vertices[..5]), None);
+        vertices[0].color[3] = 0.5;
+        assert_eq!(super::opaque_surface_color(&vertices), None);
+        vertices[0].color[3] = 1.0;
+        vertices[1].color[0] = 0.5;
+        assert_eq!(super::opaque_surface_color(&vertices), None);
+        vertices[1].color[0] = 1.0;
+        vertices[0].position[0] = -0.99;
+        assert_eq!(super::opaque_surface_color(&vertices), None);
     }
 }
